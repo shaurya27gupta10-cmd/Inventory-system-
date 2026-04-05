@@ -1,1 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Key Shop Inventory Pro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://accounts.google.com/gsi/client" async defer onload="handleGoogleScriptLoad()"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --bg: #f3f6fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --ok: #059669;
+      --warn: #d97706;
+      --danger: #dc2626;
+      --border: #e5e7eb;
+      --shadow: 0 10px 24px rgba(17, 24, 39, 0.08);
+    }
 
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(180deg, #eff6ff, #f8fafc 30%);
+      color: var(--text);
+    }
+
+    .container {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    h1 { margin: 0; font-size: 1.45rem; }
+    h2 { margin: 0 0 10px; font-size: 1.1rem; }
+    h3 { margin: 0 0 8px; font-size: 1rem; }
+
+    .muted { color: var(--muted); font-size: 0.88rem; }
+
+    .user-badge {
+      background: #eef2ff;
+      color: #3730a3;
+      border: 1px solid #c7d2fe;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .grid-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    label {
+      font-size: 0.82rem;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 9px 11px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 0.9rem;
+      outline: none;
+      background: #fff;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 10px;
+      font-weight: 700;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-outline { background: #fff; border: 1px solid var(--border); color: var(--text); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-success { background: var(--ok); color: #fff; }
+
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .stats { display: grid; gap: 10px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    .stat {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      background: #fcfdff;
+    }
+
+    .stat .label { color: var(--muted); font-size: 0.8rem; }
+    .stat .value { font-size: 1.3rem; font-weight: 800; margin-top: 4px; }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1300px;
+      font-size: 0.84rem;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--border);
+      padding: 10px;
+      text-align: left;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    th {
+      background: #f8fafc;
+      color: #374151;
+      font-weight: 700;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .thumb {
+      width: 45px;
+      height: 45px;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 1px solid var(--border);
+      background: #f3f4f6;
+    }
+
+    .stock-ok { color: var(--ok); font-weight: 700; }
+    .stock-low { color: var(--warn); font-weight: 700; }
+    .stock-out { color: var(--danger); font-weight: 700; }
+
+    .login-page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: radial-gradient(circle at top right, #dbeafe, #eff6ff 32%, #f8fafc 70%);
+    }
+
+    .login-shell {
+      width: min(980px, 100%);
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      border-radius: 22px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      border: 1px solid #cbd5e1;
+      background: #fff;
+    }
+
+    .login-info {
+      background: linear-gradient(160deg, #1d4ed8, #1e40af);
+      color: #e0e7ff;
+      padding: 26px;
+    }
+
+    .login-info h2 {
+      font-size: 1.4rem;
+      margin-bottom: 10px;
+      color: #fff;
+    }
+
+    .feature-list {
+      margin: 14px 0 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 8px;
+      font-size: 0.92rem;
+    }
+
+    .feature-list li::before {
+      content: "✓";
+      margin-right: 8px;
+      color: #93c5fd;
+      font-weight: 800;
+    }
+
+    .login-panel {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 22px;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 430px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      padding: 18px;
+      background: #fff;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      padding: 4px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      display: inline-flex;
+      margin-right: 6px;
+    }
+
+    .success { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+    .warning { background: #fff7ed; color: #9a3412; border-color: #fdba74; }
+
+    .empty {
+      text-align: center;
+      padding: 24px;
+      color: var(--muted);
+    }
+
+    @media (max-width: 960px) {
+      .grid-3, .stats { grid-template-columns: 1fr; }
+      .grid-2 { grid-template-columns: 1fr; }
+      .login-shell { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-page" id="loginPage">
+    <div class="login-shell">
+      <section class="login-info">
+        <h2>🗝️ Key Shop Inventory Pro</h2>
+        <p>Secure admin login page with Google approval before access to inventory operations.</p>
+        <ul class="feature-list">
+          <li>Add product with key image and full catalog fields</li>
+          <li>Release product with exact Date/Time tracking</li>
+          <li>Excel export + Drive webhook backup payload</li>
+          <li>Restricted admin access by approved Google ID</li>
+        </ul>
+      </section>
+
+      <section class="login-panel">
+        <div class="login-card">
+          <h2>🔐 Login with Google</h2>
+          <p class="muted">
+            Approved admin email:
+            <strong>shaurya27gupta10@gamil.com</strong>.
+          </p>
+          <div class="grid grid-2" style="margin-bottom: 10px;">
+            <div>
+              <label>Google Client ID</label>
+              <input id="googleClientId" placeholder="Paste your Google OAuth Client ID" />
+            </div>
+            <div>
+              <label>Action</label>
+              <button class="btn btn-primary" style="margin-top: 22px; width: 100%;" onclick="initGoogleSignIn()">Load Sign-In Button</button>
+            </div>
+          </div>
+          <div id="gsiButton"></div>
+          <p class="muted" style="margin-top: 12px;">
+            After login, add/release product actions are tracked with approval identity.
+          </p>
+          <p class="muted" id="loginStatus">Status: Waiting for Google Sign-In.</p>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="container" id="app" style="display:none;">
+    <div class="header card">
+      <div>
+        <h1>🗝️ Key Shop Inventory Tracking System</h1>
+        <p class="muted">Professional stock control with image, approvals, release logs, and Drive backup-ready export.</p>
+      </div>
+      <div class="btn-row">
+        <div class="user-badge" id="userBadge">Not signed in</div>
+        <button class="btn btn-outline" onclick="logout()">Logout</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="label">Total Products</div><div class="value" id="totalProducts">0</div></div>
+      <div class="stat"><div class="label">Total Stock Units</div><div class="value" id="totalUnits">0</div></div>
+      <div class="stat"><div class="label">Estimated Buy Value</div><div class="value" id="buyValue">₹0</div></div>
+      <div class="stat"><div class="label">Estimated Sell Value</div><div class="value" id="sellValue">₹0</div></div>
+    </div>
+
+    <div class="grid grid-3" style="margin-top:14px;">
+      <div class="card">
+        <h2>Add / Update Product</h2>
+        <div class="grid grid-2">
+          <div><label>Date/Time</label><input id="dt" type="datetime-local" /></div>
+          <div><label>Item Code</label><input id="itemcode" placeholder="e.g., KEY-001" /></div>
+          <div><label>Key Name</label><input id="keyname" placeholder="Main Door Key" /></div>
+          <div><label>Brand</label><input id="brand" placeholder="Godrej" /></div>
+          <div><label>Category</label><input id="category" placeholder="Door / Car / Locker" /></div>
+          <div><label>Stock (Add Qty)</label><input id="stock" type="number" min="1" value="1" /></div>
+          <div><label>Buy Price</label><input id="buyprice" type="number" min="0" step="0.01" /></div>
+          <div><label>Sell Price</label><input id="sellprice" type="number" min="0" step="0.01" /></div>
+          <div><label>Supplier</label><input id="supplier" /></div>
+          <div><label>Location</label><input id="location" placeholder="Rack A-1" /></div>
+          <div style="grid-column:1/-1;"><label>Remarks</label><textarea id="remarks" rows="2"></textarea></div>
+          <div style="grid-column:1/-1;"><label>Image</label><input id="image" type="file" accept="image/*" /></div>
+        </div>
+        <div class="btn-row" style="margin-top:10px;">
+          <button class="btn btn-primary" onclick="addOrUpdateProduct()">Add Product</button>
+          <button class="btn btn-outline" onclick="resetForm()">Clear</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Release Product</h2>
+        <div class="grid">
+          <div><label>Select Item Code</label><select id="releaseCode"></select></div>
+          <div><label>Release Qty</label><input id="releaseQty" type="number" min="1" value="1" /></div>
+          <div><label>Remarks</label><textarea id="releaseRemarks" rows="2" placeholder="Given to customer / job card"></textarea></div>
+          <button class="btn btn-danger" onclick="releaseProduct()">Release Product</button>
+        </div>
+        <p class="muted" style="margin-top:10px;">Every release updates stock and saves transaction history with exact timestamp.</p>
+      </div>
+
+      <div class="card">
+        <h2>Backup & Controls</h2>
+        <div class="grid">
+          <div><span class="pill success">Admin: shaurya27gupta10@gamil.com</span></div>
+          <div>
+            <label>Google Apps Script Webhook URL (for Drive auto backup)</label>
+            <input id="backupUrl" placeholder="https://script.google.com/macros/s/.../exec" />
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-success" onclick="exportExcel()">Export Excel</button>
+            <button class="btn btn-outline" onclick="sendBackup(true)">Send Backup Now</button>
+            <button class="btn btn-outline" onclick="toggleAutoBackup()" id="autoBackupBtn">Auto Backup: OFF</button>
+          </div>
+          <div class="muted" id="backupStatus">Backup status: Not sent yet.</div>
+          <div><label>Search</label><input id="searchInput" placeholder="Search by item code, key name, brand" oninput="renderTable()" /></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <h2>Inventory Register</h2>
+      <div class="table-wrap">
+        <table id="inventoryTable">
+          <thead>
+            <tr>
+              <th>Date/Time</th><th>Itemcode</th><th>Key Name</th><th>Brand</th><th>Category</th><th>Image</th>
+              <th>Stock</th><th>Buy Price</th><th>Sell Price</th><th>Supplier</th><th>Location</th><th>Total Stock</th><th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody id="inventoryBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <h2>Release Transaction Log</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date/Time</th><th>Itemcode</th><th>Key Name</th><th>Released Qty</th><th>Remaining Stock</th><th>Remarks</th><th>Approved By</th>
+            </tr>
+          </thead>
+          <tbody id="releaseBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const ADMIN_EMAIL = 'shaurya27gupta10@gamil.com';
+    const state = {
+      user: null,
+      inventory: JSON.parse(localStorage.getItem('inventory_v1') || '[]'),
+      releases: JSON.parse(localStorage.getItem('release_log_v1') || '[]'),
+      autoBackup: localStorage.getItem('auto_backup_v1') === 'true'
+    };
+
+    function saveState() {
+      localStorage.setItem('inventory_v1', JSON.stringify(state.inventory));
+      localStorage.setItem('release_log_v1', JSON.stringify(state.releases));
+      localStorage.setItem('auto_backup_v1', String(state.autoBackup));
+    }
+
+    function nowISO() {
+      return new Date().toISOString();
+    }
+
+    function setDefaultDateTime() {
+      const input = document.getElementById('dt');
+      const d = new Date();
+      d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+      input.value = d.toISOString().slice(0, 16);
+    }
+
+    function decodeJwt(token) {
+      const payload = token.split('.')[1];
+      const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+      const json = decodeURIComponent(atob(base64).split('').map((c) => `%${('00' + c.charCodeAt(0).toString(16)).slice(-2)}`).join(''));
+      return JSON.parse(json);
+    }
+
+    function initGoogleSignIn() {
+      if (!window.google || !google.accounts || !google.accounts.id) {
+        document.getElementById('loginStatus').textContent = 'Status: Google script not loaded yet. Please wait...';
+        return;
+      }
+      const cid = document.getElementById('googleClientId').value.trim();
+      if (!cid) {
+        alert('Please enter Google OAuth Client ID first.');
+        return;
+      }
+      localStorage.setItem('google_client_id', cid);
+      document.getElementById('loginStatus').textContent = 'Status: Google Sign-In button loaded.';
+      document.getElementById('gsiButton').innerHTML = '';
+      google.accounts.id.initialize({
+        client_id: cid,
+        callback: handleCredentialResponse
+      });
+      google.accounts.id.renderButton(document.getElementById('gsiButton'), {
+        theme: 'outline', size: 'large', shape: 'rectangular', width: 300
+      });
+    }
+
+    function handleCredentialResponse(response) {
+      const data = decodeJwt(response.credential);
+      if (!data.email || data.email.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+        alert('Access denied. This panel is only for admin: ' + ADMIN_EMAIL);
+        document.getElementById('loginStatus').textContent = `Status: Access denied for ${data.email || 'unknown email'}.`;
+        return;
+      }
+      state.user = { email: data.email, name: data.name || 'Admin' };
+      sessionStorage.setItem('user', JSON.stringify(state.user));
+      document.getElementById('loginStatus').textContent = `Status: Login approved for ${data.email}.`;
+      unlockApp();
+    }
+
+    function unlockApp() {
+      document.getElementById('loginPage').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      document.getElementById('userBadge').textContent = `${state.user.name} (${state.user.email})`;
+      document.getElementById('autoBackupBtn').textContent = `Auto Backup: ${state.autoBackup ? 'ON' : 'OFF'}`;
+      renderReleaseCodes();
+      renderTable();
+      renderReleases();
+      setDefaultDateTime();
+
+      const savedUrl = localStorage.getItem('backup_url_v1') || '';
+      document.getElementById('backupUrl').value = savedUrl;
+    }
+
+    function logout() {
+      state.user = null;
+      sessionStorage.removeItem('user');
+      document.getElementById('app').style.display = 'none';
+      document.getElementById('loginPage').style.display = 'flex';
+      document.getElementById('userBadge').textContent = 'Not signed in';
+      document.getElementById('loginStatus').textContent = 'Status: Logged out.';
+    }
+
+    function handleGoogleScriptLoad() {
+      document.getElementById('loginStatus').textContent = 'Status: Google script loaded. Click “Load Sign-In Button”.';
+      const savedClientId = localStorage.getItem('google_client_id') || '';
+      if (savedClientId && document.getElementById('loginPage').style.display !== 'none') {
+        initGoogleSignIn();
+      }
+    }
+
+    async function toBase64(file) {
+      if (!file) return '';
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function number(v) {
+      const n = parseFloat(v);
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    async function addOrUpdateProduct() {
+      const itemcode = document.getElementById('itemcode').value.trim();
+      const keyname = document.getElementById('keyname').value.trim();
+      const brand = document.getElementById('brand').value.trim();
+      const category = document.getElementById('category').value.trim();
+      const supplier = document.getElementById('supplier').value.trim();
+      const location = document.getElementById('location').value.trim();
+      const remarks = document.getElementById('remarks').value.trim();
+      const dt = document.getElementById('dt').value || nowISO();
+      const qty = Math.max(1, parseInt(document.getElementById('stock').value || '1', 10));
+      const buyPrice = number(document.getElementById('buyprice').value);
+      const sellPrice = number(document.getElementById('sellprice').value);
+      const imageFile = document.getElementById('image').files[0];
+
+      if (!itemcode || !keyname) {
+        alert('Item code and key name are required.');
+        return;
+      }
+
+      const image = await toBase64(imageFile);
+      const existing = state.inventory.find((p) => p.itemcode.toLowerCase() === itemcode.toLowerCase());
+
+      if (existing) {
+        existing.stock += qty;
+        existing.dateTime = dt;
+        existing.keyName = keyname;
+        existing.brand = brand;
+        existing.category = category;
+        existing.buyPrice = buyPrice || existing.buyPrice;
+        existing.sellPrice = sellPrice || existing.sellPrice;
+        existing.supplier = supplier;
+        existing.location = location;
+        existing.remarks = remarks;
+        if (image) existing.image = image;
+      } else {
+        state.inventory.push({
+          dateTime: dt,
+          itemcode,
+          keyName: keyname,
+          brand,
+          category,
+          image,
+          stock: qty,
+          buyPrice,
+          sellPrice,
+          supplier,
+          location,
+          totalStock: qty,
+          remarks
+        });
+      }
+
+      state.inventory.forEach((item) => item.totalStock = item.stock);
+      saveState();
+      renderReleaseCodes();
+      renderTable();
+      resetForm();
+      await sendBackup();
+    }
+
+    function resetForm() {
+      ['itemcode','keyname','brand','category','stock','buyprice','sellprice','supplier','location','remarks','image'].forEach((id) => {
+        if (id === 'stock') document.getElementById(id).value = '1';
+        else document.getElementById(id).value = '';
+      });
+      setDefaultDateTime();
+    }
+
+    function releaseProduct() {
+      const code = document.getElementById('releaseCode').value;
+      const qty = Math.max(1, parseInt(document.getElementById('releaseQty').value || '1', 10));
+      const remarks = document.getElementById('releaseRemarks').value.trim();
+      const item = state.inventory.find((p) => p.itemcode === code);
+
+      if (!item) {
+        alert('Select valid product.');
+        return;
+      }
+      if (item.stock < qty) {
+        alert('Not enough stock available.');
+        return;
+      }
+
+      item.stock -= qty;
+      item.totalStock = item.stock;
+
+      state.releases.unshift({
+        dateTime: nowISO(),
+        itemcode: item.itemcode,
+        keyName: item.keyName,
+        releasedQty: qty,
+        remainingStock: item.stock,
+        remarks,
+        approvedBy: state.user.email
+      });
+
+      saveState();
+      renderTable();
+      renderReleases();
+      sendBackup();
+      document.getElementById('releaseRemarks').value = '';
+    }
+
+    function renderReleaseCodes() {
+      const sel = document.getElementById('releaseCode');
+      sel.innerHTML = state.inventory.map((p) => `<option value="${p.itemcode}">${p.itemcode} — ${p.keyName}</option>`).join('');
+    }
+
+    function stockClass(n) {
+      if (n <= 0) return 'stock-out';
+      if (n <= 5) return 'stock-low';
+      return 'stock-ok';
+    }
+
+    function renderTable() {
+      const body = document.getElementById('inventoryBody');
+      const q = document.getElementById('searchInput').value.toLowerCase().trim();
+      const rows = state.inventory.filter((p) => {
+        if (!q) return true;
+        return [p.itemcode, p.keyName, p.brand, p.category].some((x) => (x || '').toLowerCase().includes(q));
+      });
+
+      body.innerHTML = rows.length ? rows.map((p) => `
+        <tr>
+          <td>${fmtDate(p.dateTime)}</td>
+          <td>${escapeHtml(p.itemcode)}</td>
+          <td>${escapeHtml(p.keyName)}</td>
+          <td>${escapeHtml(p.brand || '')}</td>
+          <td>${escapeHtml(p.category || '')}</td>
+          <td>${p.image ? `<img class="thumb" src="${p.image}" alt="key image"/>` : '-'}</td>
+          <td class="${stockClass(p.stock)}">${p.stock}</td>
+          <td>₹${number(p.buyPrice).toFixed(2)}</td>
+          <td>₹${number(p.sellPrice).toFixed(2)}</td>
+          <td>${escapeHtml(p.supplier || '')}</td>
+          <td>${escapeHtml(p.location || '')}</td>
+          <td>${p.totalStock || p.stock}</td>
+          <td>${escapeHtml(p.remarks || '')}</td>
+        </tr>
+      `).join('') : `<tr><td colspan="13" class="empty">No inventory found.</td></tr>`;
+
+      const totalProducts = state.inventory.length;
+      const totalUnits = state.inventory.reduce((s, p) => s + p.stock, 0);
+      const buyValue = state.inventory.reduce((s, p) => s + p.stock * number(p.buyPrice), 0);
+      const sellValue = state.inventory.reduce((s, p) => s + p.stock * number(p.sellPrice), 0);
+
+      document.getElementById('totalProducts').textContent = totalProducts;
+      document.getElementById('totalUnits').textContent = totalUnits;
+      document.getElementById('buyValue').textContent = `₹${buyValue.toFixed(2)}`;
+      document.getElementById('sellValue').textContent = `₹${sellValue.toFixed(2)}`;
+    }
+
+    function renderReleases() {
+      const body = document.getElementById('releaseBody');
+      body.innerHTML = state.releases.length ? state.releases.map((r) => `
+        <tr>
+          <td>${fmtDate(r.dateTime)}</td>
+          <td>${escapeHtml(r.itemcode)}</td>
+          <td>${escapeHtml(r.keyName)}</td>
+          <td>${r.releasedQty}</td>
+          <td>${r.remainingStock}</td>
+          <td>${escapeHtml(r.remarks || '')}</td>
+          <td>${escapeHtml(r.approvedBy || '')}</td>
+        </tr>
+      `).join('') : `<tr><td colspan="7" class="empty">No release history.</td></tr>`;
+    }
+
+    function exportExcel() {
+      const rows = state.inventory.map((p) => ({
+        'Date/Time': fmtDate(p.dateTime),
+        'Itemcode': p.itemcode,
+        'Key Name': p.keyName,
+        'Brand': p.brand || '',
+        'Category': p.category || '',
+        'Image': p.image ? 'Embedded (Base64)' : '',
+        'Stock': p.stock,
+        'Buy Price': number(p.buyPrice),
+        'Sell Price': number(p.sellPrice),
+        'Supplier': p.supplier || '',
+        'Location': p.location || '',
+        'Total Stock': p.totalStock || p.stock,
+        'Remarks': p.remarks || ''
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Inventory');
+
+      const rs = XLSX.utils.json_to_sheet(state.releases.map((r) => ({
+        'Date/Time': fmtDate(r.dateTime),
+        'Itemcode': r.itemcode,
+        'Key Name': r.keyName,
+        'Released Qty': r.releasedQty,
+        'Remaining Stock': r.remainingStock,
+        'Remarks': r.remarks || '',
+        'Approved By': r.approvedBy || ''
+      })));
+      XLSX.utils.book_append_sheet(wb, rs, 'Releases');
+      XLSX.writeFile(wb, `key-shop-inventory-${new Date().toISOString().slice(0,10)}.xlsx`);
+    }
+
+    async function sendBackup(manual = false) {
+      const urlEl = document.getElementById('backupUrl');
+      if (!urlEl) return;
+      const url = urlEl.value.trim();
+      localStorage.setItem('backup_url_v1', url);
+      if (!url) {
+        if (manual) document.getElementById('backupStatus').textContent = 'Backup status: Add Apps Script URL first.';
+        return;
+      }
+
+      if (!manual && !state.autoBackup) return;
+
+      const payload = {
+        exportedAt: nowISO(),
+        admin: ADMIN_EMAIL,
+        approvedBy: state.user.email,
+        inventory: state.inventory,
+        releases: state.releases,
+        columns: ['Date/Time','Itemcode','Key Name','Brand','Category','Image','Stock','Buy Price','Sell Price','Supplier','Location','Total Stock','Remarks']
+      };
+
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        document.getElementById('backupStatus').textContent = `Backup status: ${res.ok ? 'Success' : 'Failed'} at ${new Date().toLocaleString()}`;
+      } catch (e) {
+        document.getElementById('backupStatus').textContent = `Backup status: Error (${e.message})`;
+      }
+    }
+
+    function toggleAutoBackup() {
+      state.autoBackup = !state.autoBackup;
+      saveState();
+      document.getElementById('autoBackupBtn').textContent = `Auto Backup: ${state.autoBackup ? 'ON' : 'OFF'}`;
+      if (state.autoBackup) sendBackup(true);
+    }
+
+    function fmtDate(d) {
+      try {
+        return new Date(d).toLocaleString();
+      } catch {
+        return d || '';
+      }
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    (function init() {
+      const saved = sessionStorage.getItem('user');
+      if (saved) {
+        const user = JSON.parse(saved);
+        if (user.email && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+          state.user = user;
+          unlockApp();
+        }
+      }
+
+      const savedClientId = localStorage.getItem('google_client_id') || '';
+      document.getElementById('googleClientId').value = savedClientId;
+      if (savedClientId && window.google && google.accounts && google.accounts.id) {
+        initGoogleSignIn();
+      }
+    })();
+  </script>
+</body>
+</html>
